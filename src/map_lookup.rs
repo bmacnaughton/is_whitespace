@@ -61,7 +61,18 @@ pub mod white_space {
         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
         0, 0, 0, 0, 0, 0, 0, 0, 0,
     ];
+    #[inline]
     pub fn lookup(c: char) -> bool {
+        //let high_bits = c as u32 >> 8;
+        //if high_bits == 0 {
+        //    WHITESPACE_MAP[c as usize & 0xff] & 1 != 0
+        //} else if high_bits == 22 {
+        //    c as u32 == 0x1680
+        //} else if high_bits == 32 {
+        //    WHITESPACE_MAP[c as usize & 0xff] & 2 != 0
+        //} else {
+        //    false
+        //}
         match c as u32 >> 8 {
             0 => WHITESPACE_MAP[c as usize & 0xff] & 1 != 0,
             22 => c as u32 == 0x1680,

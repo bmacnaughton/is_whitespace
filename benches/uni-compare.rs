@@ -11,11 +11,15 @@ use criterion::{
 use ws_lib::map_lookup::white_space::lookup as uni_ws;
 
 const ISSUE_38: &str = include_str!("issue-38.json");
+const ADDRESSES: &str = include_str!("500-random-us-addresses.json");
 
 // Benchmarks the get_input_trait trait collection for inputs
 // cargo bench --bench get-traits -- "get-traits/Trait collection"
 // cargo bench --bench get-traits -- "get-traits/Trait collection/astronomy"
 fn unicode_whitespace(c: &mut Criterion) {
+    #[allow(non_snake_case)]
+    let BLANKS: String = " ".repeat(30_000);
+
     let mut group = c.benchmark_group("whitespace");
     group.warm_up_time(Duration::from_secs(1));
     group.measurement_time(Duration::from_secs(3));
@@ -87,6 +91,34 @@ fn unicode_whitespace(c: &mut Criterion) {
     let id = BenchmarkId::new("uni_ws", "issue-38");
     group.bench_function(id, |b| b.iter(|| {
         for ch in ISSUE_38.chars() {
+            let _ = uni_ws(black_box(ch));
+        }
+    }));
+
+    let id = BenchmarkId::new("is_whitespace", "500-addresses");
+    group.bench_function(id, |b| b.iter(|| {
+        for ch in ADDRESSES.chars() {
+            let _ = char::is_whitespace(black_box(ch));
+        }
+    }));
+
+    let id = BenchmarkId::new("uni_ws", "500-addresses");
+    group.bench_function(id, |b| b.iter(|| {
+        for ch in ADDRESSES.chars() {
+            uni_ws(black_box(ch));
+        }
+    }));
+
+    let id = BenchmarkId::new("is_whitespace", "30K-blanks");
+    group.bench_function(id, |b| b.iter(|| {
+        for ch in BLANKS.chars() {
+            let _ = char::is_whitespace(black_box(ch));
+        }
+    }));
+
+    let id = BenchmarkId::new("uni_ws", "30K-blanks");
+    group.bench_function(id, |b| b.iter(|| {
+        for ch in BLANKS.chars() {
             uni_ws(black_box(ch));
         }
     }));
