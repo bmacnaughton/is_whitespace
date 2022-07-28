@@ -16,9 +16,6 @@ const ISSUE_38: &str = include_str!("issue-38.json");
 const ADDRESSES: &str = include_str!("500-random-us-addresses.json");
 
 
-// Benchmarks the get_input_trait trait collection for inputs
-// cargo bench --bench get-traits -- "get-traits/Trait collection"
-// cargo bench --bench get-traits -- "get-traits/Trait collection/astronomy"
 fn unicode_whitespace(c: &mut Criterion) {
     let first_128 = (0..0x80).map(|c| char::from_u32(c).unwrap()).collect::<String>();
     let first_256 = (0..0x100).map(|c| char::from_u32(c).unwrap()).collect::<String>();
