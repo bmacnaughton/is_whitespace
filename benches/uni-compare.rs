@@ -8,151 +8,76 @@ use criterion::{
     black_box,
 };
 
-use ws_lib::map_lookup::white_space::lookup as uni_ws;
+use ws_lib::map_lookup::white_space::lookup as mapped;
+use ws_lib::map_lookup::match_ws as match_ws;
+use ws_lib::map_lookup::mapped_if;
 
 const ISSUE_38: &str = include_str!("issue-38.json");
 const ADDRESSES: &str = include_str!("500-random-us-addresses.json");
+
 
 // Benchmarks the get_input_trait trait collection for inputs
 // cargo bench --bench get-traits -- "get-traits/Trait collection"
 // cargo bench --bench get-traits -- "get-traits/Trait collection/astronomy"
 fn unicode_whitespace(c: &mut Criterion) {
-    #[allow(non_snake_case)]
-    let BLANKS: String = " ".repeat(30_000);
+    let first_128 = (0..0x80).map(|c| char::from_u32(c).unwrap()).collect::<String>();
+    let first_256 = (0..0x100).map(|c| char::from_u32(c).unwrap()).collect::<String>();
+    let first_16384 = (0..0x4000).map(|c| char::from_u32(c).unwrap()).collect::<String>();
+    let thirty_k_blanks = (0..30_000).map(|_| ' ').collect::<String>();
+    let inputs: Vec<(&str, &str)> = vec![
+        ("issue-38", ISSUE_38),
+        ("addresses", ADDRESSES),
+        ("first-128", &first_128),
+        ("first-256", &first_256),
+        ("first-4000", &first_16384),
+        ("30K-blanks", &thirty_k_blanks),
+        ("single-space", " "),
+        ("single-a", "a"),
+        ("single-tab", "\t"),
+    ];
 
-    let mut group = c.benchmark_group("whitespace");
+    let mut group = c.benchmark_group("ws");
     group.warm_up_time(Duration::from_secs(1));
     group.measurement_time(Duration::from_secs(3));
 
+    for (name, string) in inputs {
+        let id1 = BenchmarkId::new("is_whitespace", name);
+        let id2 = BenchmarkId::new("is_ascii", name);
+        let id3 = BenchmarkId::new("match", name);
+        let id4 = BenchmarkId::new("mapped", name);
+        let id5 = BenchmarkId::new("mapped-if", name);
 
-    let id = BenchmarkId::new("is_whitespace", "extended");
-    group.bench_function(id, |b| b.iter(|| {
-        for i in 0..0x4000 {
-            let ch = char::from_u32(i).unwrap();
-            let _  = char::is_whitespace(black_box(ch));
-        }
-    }));
+        group.bench_with_input(id1, name, |b, _i|
+                b.iter(|| string.chars().for_each(|c| {
+                    black_box(c.is_whitespace());
+                }))
+        );
 
-    let id = BenchmarkId::new("uni_ws", "extended");
-    group.bench_function(id, |b| b.iter(|| {
-        for i in 0..0x4000 {
-            let ch = char::from_u32(i).unwrap();
-            uni_ws(black_box(ch));
-        }
-    }));
+        group.bench_with_input(id2, name, |b, _i|
+                b.iter(|| string.chars().for_each(|c| {
+                    black_box(c.is_ascii_whitespace());
+                }))
+        );
 
-    let id = BenchmarkId::new("is_whitespace", "ascii");
-    group.bench_function(id, |b| b.iter(|| {
-        for i in 0..=0x7f {
-            let ch = char::from_u32(i).unwrap();
-            let _ = char::is_whitespace(black_box(ch));
-        }
-    }));
+        group.bench_with_input(id3, name, |b, _i|
+                b.iter(|| string.chars().for_each(|c| {
+                    black_box(match_ws(c));
+                }))
+        );
 
-    let id = BenchmarkId::new("uni_ws", "ascii");
-    group.bench_function(id, |b| b.iter(|| {
-        for i in 0..=0x7f {
-            let ch = char::from_u32(i).unwrap();
-            uni_ws(black_box(ch));
-        }
-    }));
+        group.bench_with_input(id4, name, |b, _i|
+                b.iter(|| string.chars().for_each(|c| {
+                    black_box(mapped(c));
+                }))
+        );
 
-    let id = BenchmarkId::new("is_ascii_whitespace", "ascii");
-    group.bench_function(id, |b| b.iter(|| {
-        for i in 0..=0x7f {
-            let ch = char::from_u32(i).unwrap();
-            let _ = char::is_ascii_whitespace(black_box(&ch));
-        }
-    }));
+        group.bench_with_input(id5, name, |b, _i|
+                b.iter(|| string.chars().for_each(|c| {
+                    black_box(mapped_if(c));
+                }))
+        );
 
-    let id = BenchmarkId::new("is_whitespace", "first-256");
-    group.bench_function(id, |b| b.iter(|| {
-        for i in 0..=0xff {
-            let ch = char::from_u32(i).unwrap();
-            let _ = char::is_whitespace(black_box(ch));
-        }
-    }));
-
-    let id = BenchmarkId::new("uni_ws", "first-256");
-    group.bench_function(id, |b| b.iter(|| {
-        for i in 0..=0xff {
-            let ch = char::from_u32(i).unwrap();
-            uni_ws(black_box(ch));
-        }
-    }));
-
-    let id = BenchmarkId::new("is_whitespace", "issue-38");
-    group.bench_function(id, |b| b.iter(|| {
-        for ch in ISSUE_38.chars() {
-            let _ = char::is_whitespace(black_box(ch));
-        }
-    }));
-
-    let id = BenchmarkId::new("uni_ws", "issue-38");
-    group.bench_function(id, |b| b.iter(|| {
-        for ch in ISSUE_38.chars() {
-            let _ = uni_ws(black_box(ch));
-        }
-    }));
-
-    let id = BenchmarkId::new("is_whitespace", "500-addresses");
-    group.bench_function(id, |b| b.iter(|| {
-        for ch in ADDRESSES.chars() {
-            let _ = char::is_whitespace(black_box(ch));
-        }
-    }));
-
-    let id = BenchmarkId::new("uni_ws", "500-addresses");
-    group.bench_function(id, |b| b.iter(|| {
-        for ch in ADDRESSES.chars() {
-            uni_ws(black_box(ch));
-        }
-    }));
-
-    let id = BenchmarkId::new("is_whitespace", "30K-blanks");
-    group.bench_function(id, |b| b.iter(|| {
-        for ch in BLANKS.chars() {
-            let _ = char::is_whitespace(black_box(ch));
-        }
-    }));
-
-    let id = BenchmarkId::new("uni_ws", "30K-blanks");
-    group.bench_function(id, |b| b.iter(|| {
-        for ch in BLANKS.chars() {
-            uni_ws(black_box(ch));
-        }
-    }));
-
-    let id = BenchmarkId::new("is_whitespace", "single-space");
-    group.bench_function(id, |b| b.iter(|| {
-        let _ = char::is_whitespace(black_box(' '));
-    }));
-
-    let id = BenchmarkId::new("uni_ws", "single-space");
-    group.bench_function(id, |b| b.iter(|| {
-        uni_ws(black_box(' '));
-    }));
-
-
-    let id = BenchmarkId::new("is_whitespace", "single-a");
-    group.bench_function(id, |b| b.iter(|| {
-        let _ = char::is_whitespace(black_box('a'));
-    }));
-
-    let id = BenchmarkId::new("uni_ws", "single-a");
-    group.bench_function(id, |b| b.iter(|| {
-        uni_ws(black_box('a'));
-    }));
-
-    let id = BenchmarkId::new("is_whitespace", "single-tab");
-    group.bench_function(id, |b| b.iter(|| {
-        let _ = char::is_whitespace(black_box('a'));
-    }));
-
-    let id = BenchmarkId::new("uni_ws", "single-tab");
-    group.bench_function(id, |b| b.iter(|| {
-        uni_ws(black_box('a'));
-    }));
+    }
 
     group.finish();
 }

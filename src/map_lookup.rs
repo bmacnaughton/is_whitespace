@@ -37,12 +37,40 @@ const fn make_whitespace() -> [u8; 256] {
 const WHITESPACE_MAP: [u8; 256] = make_whitespace();
 
 #[inline]
-pub const fn uni_ws(c: char) -> bool {
-    match c as u32 >> 8 {
-        0x00 => WHITESPACE_MAP[c as usize & 0xff] & (1 << 0) != 0,
-        0x16 => c == '\u{1680}',
-        0x20 => WHITESPACE_MAP[c as usize & 0xff] & (1 << 2) != 0,
-        0x30 => c == '\u{3000}',
+pub const fn mapped_if(c: char) -> bool {
+    let high_3_bits = c as u32 >> 8;
+    if high_3_bits == 0x00 {
+        WHITESPACE_MAP[c as usize & 0xff] & (1 << 0) != 0
+    } else if high_3_bits < 0x20 {
+        c == '\u{1680}'
+    } else if high_3_bits < 0x30 {
+        WHITESPACE_MAP[c as usize & 0xff] & (1 << 2) != 0
+    } else {
+        c == '\u{3000}'
+    }
+    //match c as u32 >> 8 {
+    //    0x00 => WHITESPACE_MAP[c as usize & 0xff] & (1 << 0) != 0,
+    //    0x16 => c == '\u{1680}',
+    //    0x20 => WHITESPACE_MAP[c as usize & 0xff] & (1 << 2) != 0,
+    //    0x30 => c == '\u{3000}',
+    //    _ => false,
+    //}
+}
+
+#[inline]
+pub const fn match_ws(c: char) -> bool {
+    match c {
+        '\u{9}'..='\u{d}'|
+        '\u{20}'|
+        '\u{85}'|
+        '\u{a0}'|
+        '\u{1680}'|
+        '\u{2000}'..='\u{200a}'|
+        '\u{2028}'|'\u{2029}'|
+        '\u{202f}'|
+        '\u{205f}'|
+        '\u{3000}'
+            => true,
         _ => false,
     }
 }
